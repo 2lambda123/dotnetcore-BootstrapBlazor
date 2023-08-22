@@ -25,7 +25,6 @@ public partial class Table<TItem> : ITable, IModelEqualityComparer<TItem> where 
     /// 获得 Table 组件样式表
     /// </summary>
     private string? ClassName => CssBuilder.Default("table-container")
-        .AddClass("table-fixed", IsFixedHeader && !Height.HasValue)
         .AddClassFromAttributes(AdditionalAttributes)
         .Build();
 
@@ -43,15 +42,17 @@ public partial class Table<TItem> : ITable, IModelEqualityComparer<TItem> where 
         .AddClass("table-bordered", IsBordered)
         .AddClass("table-striped table-hover", IsStriped)
         .AddClass("table-layout-fixed", IsFixedHeader)
+        .AddClass("table-draggable", AllowDragColumn)
         .Build();
 
     /// <summary>
     /// 获得 wrapper 样式表集合
     /// </summary>
     protected string? WrapperClassName => CssBuilder.Default()
+        .AddClass("table-shim", ActiveRenderMode == TableRenderMode.Table)
         .AddClass("table-wrapper", IsBordered)
         .AddClass("is-clickable", ClickToSelect || DoubleClickToEdit || OnClickRowCallback != null || OnDoubleClickRowCallback != null)
-        .AddClass("table-scroll", !IsFixedHeader || FixedColumn)
+        .AddClass("table-scroll scroll", !IsFixedHeader || FixedColumn)
         .AddClass("table-fixed", IsFixedHeader)
         .AddClass("table-fixed-column", FixedColumn)
         .AddClass("table-resize", AllowResizing)
@@ -134,6 +135,14 @@ public partial class Table<TItem> : ITable, IModelEqualityComparer<TItem> where 
     private string? PageInfoLabelString => Localizer[nameof(PageInfoText), PageStartIndex, (PageIndex - 1) * PageItems + Rows.Count, TotalCount];
 
     private static string? GetColWidthString(int? width) => width.HasValue ? $"width: {width.Value}px;" : null;
+
+    /// <summary>
+    /// 获得/设置 滚动条宽度 默认为 7
+    /// </summary>
+    [Parameter]
+    public int ScrollWidth { get; set; } = 7;
+
+    private string ScrollWidthString => $"width: {ScrollWidth}px;";
 
     /// <summary>
     /// 获得/设置 Table 高度 默认为 null
@@ -575,6 +584,7 @@ public partial class Table<TItem> : ITable, IModelEqualityComparer<TItem> where 
         OnFilterAsync = async () =>
         {
             PageIndex = 1;
+            TotalCount = 0;
             await QueryAsync();
         };
     }
@@ -779,7 +789,17 @@ public partial class Table<TItem> : ITable, IModelEqualityComparer<TItem> where 
         if (_init)
         {
             _init = false;
-            await InvokeVoidAsync("init", Id);
+            await InvokeVoidAsync("init", Id, Interop, new
+            {
+                DragColumnCallback = nameof(DragColumnCallback),
+                ResizeColumnCallback = OnResizeColumnAsync != null ? nameof(ResizeColumnCallback) : null
+            });
+        }
+
+        if (_resetColumns)
+        {
+            _resetColumns = false;
+            await InvokeVoidAsync("resetColumn", Id);
         }
 
         if (UpdateSortTooltip)
@@ -1092,6 +1112,10 @@ public partial class Table<TItem> : ITable, IModelEqualityComparer<TItem> where 
         {
             PageItems = Math.Min(request.Count, TotalCount - request.StartIndex);
         }
+        else
+        {
+            PageItems = request.Count;
+        }
         await QueryData();
         return new ItemsProviderResult<TItem>(QueryItems, TotalCount);
     }
@@ -1143,6 +1167,8 @@ public partial class Table<TItem> : ITable, IModelEqualityComparer<TItem> where 
         return ret;
     }
 
+    private int GetLineNo(TItem item) => Rows.IndexOf(item) + 1 + ((ScrollMode == ScrollMode.Virtual && Items == null) ? StartIndex : (PageIndex - 1) * PageItems);
+
     /// <summary>
     /// Reset all Columns Filter
     /// </summary>
@@ -1182,6 +1208,113 @@ public partial class Table<TItem> : ITable, IModelEqualityComparer<TItem> where 
         {
             await ContextMenuZone.OnContextMenu(e, item);
         }
+    }
+
+    /// <summary>
+    /// 获得/设置 是否允许拖放标题栏更改栏位顺序，默认为 false
+    /// </summary>
+    [Parameter]
+    public bool AllowDragColumn { get; set; }
+
+    private string? DraggableString => AllowDragColumn ? "true" : null;
+
+    /// <summary>
+    /// 获得/设置 拖动列结束回调方法 
+    /// </summary>
+    [Parameter]
+    public Func<string, Task>? OnDragColumnEndAsync { get; set; }
+
+    /// <summary>
+    /// 获得/设置 设置列宽回调方法 
+    /// </summary>
+    [Parameter]
+    public Func<string, float, Task>? OnResizeColumnAsync { get; set; }
+
+    /// <summary>
+    /// 重置列方法 由 JavaScript 脚本调用
+    /// </summary>
+    /// <param name="originIndex"></param>
+    /// <param name="currentIndex"></param>
+    /// <returns></returns>
+    [JSInvokable]
+    public async Task DragColumnCallback(int originIndex, int currentIndex)
+    {
+        var firstColumn = GetVisibleColumns().ElementAtOrDefault(originIndex);
+        var targetColumn = GetVisibleColumns().ElementAtOrDefault(currentIndex);
+        if (firstColumn != null && targetColumn != null)
+        {
+            var index = Columns.IndexOf(targetColumn);
+            Columns.Remove(firstColumn);
+            Columns.Insert(index, firstColumn);
+
+            if (OnDragColumnEndAsync != null)
+            {
+                await OnDragColumnEndAsync(firstColumn.GetFieldName());
+            }
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// 设置列宽方法 由 JavaScript 脚本调用
+    /// </summary>
+    /// <param name="index"></param>
+    /// <param name="width"></param>
+    /// <returns></returns>
+    [JSInvokable]
+    public async Task ResizeColumnCallback(int index, float width)
+    {
+        var column = GetVisibleColumns().ElementAtOrDefault(index);
+        if (column != null)
+        {
+            if (OnResizeColumnAsync != null)
+            {
+                await OnResizeColumnAsync(column.GetFieldName(), width);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 是否触摸
+    /// </summary>
+    private bool TouchStart { get; set; }
+
+    /// <summary>
+    /// 触摸定时器工作指示
+    /// </summary>
+    private bool IsBusy { get; set; }
+
+    private async Task OnTouchStart(TouchEventArgs e, TItem item)
+    {
+        if (!IsBusy && ContextMenuZone != null)
+        {
+            IsBusy = true;
+            TouchStart = true;
+
+            // 延时保持 TouchStart 状态
+            await Task.Delay(200);
+            if (TouchStart)
+            {
+                var args = new MouseEventArgs()
+                {
+                    ClientX = e.Touches[0].ClientX,
+                    ClientY = e.Touches[0].ClientY,
+                    ScreenX = e.Touches[0].ScreenX,
+                    ScreenY = e.Touches[0].ScreenY,
+                };
+                // 弹出关联菜单
+                await OnContextMenu(args, item);
+
+                //延时防止重复激活菜单功能
+                await Task.Delay(200);
+            }
+            IsBusy = false;
+        }
+    }
+
+    private void OnTouchEnd()
+    {
+        TouchStart = false;
     }
 
     /// <summary>

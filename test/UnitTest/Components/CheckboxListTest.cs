@@ -29,6 +29,25 @@ public class CheckboxListTest : BootstrapBlazorTestBase
     }
 
     [Fact]
+    public void Group_Ok()
+    {
+        var cut = Context.RenderComponent<BootstrapInputGroup>(pb =>
+        {
+            pb.AddChildContent<BootstrapInputGroupLabel>(pb =>
+            {
+                pb.Add(a => a.DisplayText, "GroupLabel");
+            });
+            pb.AddChildContent<Checkbox<string>>(pb =>
+            {
+                pb.Add(a => a.ShowLabel, true);
+                pb.Add(a => a.DisplayText, "TestLabel");
+            });
+        });
+        Assert.DoesNotContain("TestLabel", cut.Markup);
+        Assert.Contains("GroupLabel", cut.Markup);
+    }
+
+    [Fact]
     public void EditorForm_Ok()
     {
         var foo = Foo.Generate(Localizer);
@@ -37,7 +56,7 @@ public class CheckboxListTest : BootstrapBlazorTestBase
             builder.Add(a => a.Model, foo);
             builder.AddChildContent<CheckboxList<IEnumerable<string>>>(pb =>
             {
-                pb.Add(a => a.Items, Foo.GenerateHobbys(Localizer));
+                pb.Add(a => a.Items, Foo.GenerateHobbies(Localizer));
                 pb.Add(a => a.Value, foo.Hobby);
                 pb.Add(a => a.ValueExpression, foo.GenerateValueExpression(nameof(foo.Hobby), typeof(IEnumerable<string>)));
             });
@@ -57,7 +76,7 @@ public class CheckboxListTest : BootstrapBlazorTestBase
         var foo = Foo.Generate(Localizer);
         var cut = Context.RenderComponent<CheckboxList<IEnumerable<string>>>(pb =>
         {
-            pb.Add(a => a.Items, Foo.GenerateHobbys(Localizer));
+            pb.Add(a => a.Items, Foo.GenerateHobbies(Localizer));
             pb.Add(a => a.Value, foo.Hobby);
         });
         Assert.DoesNotContain("no-border", cut.Markup);
@@ -119,7 +138,7 @@ public class CheckboxListTest : BootstrapBlazorTestBase
 
         cut.SetParametersAndRender(pb =>
         {
-            pb.Add(a => a.Items, Foo.GenerateHobbys(Localizer));
+            pb.Add(a => a.Items, Foo.GenerateHobbies(Localizer));
         });
         Assert.Contains("test-item", cut.Markup);
     }
@@ -165,7 +184,7 @@ public class CheckboxListTest : BootstrapBlazorTestBase
         var foo = Foo.Generate(Localizer);
         var cut = Context.RenderComponent<CheckboxList<IEnumerable<string>>>(pb =>
         {
-            pb.Add(a => a.Items, Foo.GenerateHobbys(Localizer));
+            pb.Add(a => a.Items, Foo.GenerateHobbies(Localizer));
             pb.Add(a => a.Value, foo.Hobby);
             pb.Add(a => a.OnSelectedChanged, (v1, v2) =>
             {

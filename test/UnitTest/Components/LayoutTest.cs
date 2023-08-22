@@ -75,7 +75,11 @@ public class LayoutTest : BootstrapBlazorTestBase
             });
             pb.Add(a => a.IsCollapsedChanged, v => collapsed = v);
         });
-        cut.Find("header > a").Click();
+
+        cut.InvokeAsync(() =>
+        {
+            cut.Find("header > a").Click();
+        });
         Assert.True(collapsed);
 
         cut.SetParametersAndRender(pb => pb.Add(a => a.ShowCollapseBar, false));
@@ -213,7 +217,10 @@ public class LayoutTest : BootstrapBlazorTestBase
                 return Task.FromResult(true);
             });
         });
-        navMan.NavigateTo("/");
+        cut.InvokeAsync(() =>
+        {
+            navMan.NavigateTo("/");
+        });
         Assert.Equal("http://localhost/", navMan.Uri);
 
         cut.SetParametersAndRender(pb =>
@@ -223,7 +230,10 @@ public class LayoutTest : BootstrapBlazorTestBase
                 return Task.FromResult(url == "http://localhost/Test");
             });
         });
-        navMan.NavigateTo("/");
+        cut.InvokeAsync(() =>
+        {
+            navMan.NavigateTo("/");
+        });
         Assert.Equal("http://localhost/Test", navMan.Uri);
     }
 

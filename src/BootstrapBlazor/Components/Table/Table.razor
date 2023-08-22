@@ -1,7 +1,7 @@
 ﻿@namespace BootstrapBlazor.Components
 @typeparam TItem
 @inherits BootstrapModuleComponentBase
-@attribute [BootstrapModuleAutoLoader]
+@attribute [BootstrapModuleAutoLoader(JSObjectReference = true)]
 
 <div @attributes="@AdditionalAttributes" class="@ClassName" style="@StyleString" id="@Id">
     <CascadingValue Value="this" IsFixed="true">
@@ -49,7 +49,7 @@
                         }
                         @if (ShowDeleteButton)
                         {
-                            <TableToolbarPopconfirmButton TItem="TItem" Color="Color.Danger"
+                            <TableToolbarPopConfirmButton TItem="TItem" Color="Color.Danger"
                                                           Icon="@DeleteButtonIcon" Text="@DeleteButtonText" IsDisabled="GetDeleteButtonStatus()"
                                                           OnBeforeClick="ConfirmDelete" OnConfirm="DeleteAsync"
                                                           CloseButtonText="@CancelDeleteButtonText" Content="@ConfirmDeleteContentText"
@@ -124,7 +124,7 @@
                                             <span>@ExportExcelDropdownItemText</span>
                                         </div>
                                     }
-                                    if(ShowExportPdfButton)
+                                    if (ShowExportPdfButton)
                                     {
                                         <div class="dropdown-item" @onclick="@ExportPdfAsync">
                                             <i class="@PdfExportIcon"></i>
@@ -207,13 +207,16 @@
                 {
 					OnBeforeRenderRow?.Invoke(item);
 					<DynamicElement class="@GetRowClassString(item, "table-row")"
-                                    TriggerContextMenu="ContextMenuZone != null" OnContextMenu="e => OnContextMenu(e, item)"
+                                    TriggerContextMenu="ContextMenuZone != null" OnContextMenu="e => OnContextMenu(e, item)" @ontouchstart="e => OnTouchStart(e, item)" @ontouchend="OnTouchEnd"
                                     TriggerClick="@(ClickToSelect || OnClickRowCallback != null)" OnClick="() => ClickRow(item)">
                         @if (IsMultipleSelect)
                         {
                             <div class="table-cell">
                                 <label>@CheckboxDisplayText</label>
-                                <Checkbox TValue="TItem" Value="@item" State="@RowCheckState(item)" OnStateChanged="OnCheck" @onclick:stopPropagation></Checkbox>
+                                @if (GetShowRowCheckbox(item))
+                                {
+                                    <Checkbox TValue="TItem" Value="@item" State="@RowCheckState(item)" OnStateChanged="OnCheck" @onclick:stopPropagation></Checkbox>
+                                }
                             </div>
                         }
                         @if (ShowLineNo)
@@ -283,7 +286,7 @@
             <Spinner Color="Color.Primary" />
         </div>
 
-        @if (RenderMode == TableRenderMode.Auto)
+        @if (Columns.Any(col => col.ShownWithBreakPoint != BreakPoint.None))
         {
             <Responsive OnBreakPointChanged="OnBreakPointChanged" />
         }
@@ -433,7 +436,7 @@
         }
         @if (hasScroll)
         {
-            <col style="width: 7px;" />
+            <col style="@ScrollWidthString" />
         }
     </colgroup>;
 
@@ -478,7 +481,7 @@
                         var fieldName = col.GetFieldName();
                         var displayName = col.GetDisplayName();
                         <DynamicElement TagName="th" class="@GetHeaderClassString(col)" style="@GetFixedCellStyleString(col, 6)"
-                                        TriggerClick="col.Sortable" OnClick="@OnClickHeader(col)">
+                                        TriggerClick="col.Sortable" OnClick="@OnClickHeader(col)" draggable="@DraggableString">
                             <div class="@GetHeaderWrapperClassString(col)">
                                 @if(col.ShowCopyColumn)
                                 {
@@ -596,7 +599,7 @@
 
     RenderFragment<TItem> RenderRow => item =>
     @<DynamicElement TagName="tr" class="@GetRowClassString(item)"
-                     TriggerContextMenu="ContextMenuZone != null" OnContextMenu="e => OnContextMenu(e, item)"
+                     TriggerContextMenu="ContextMenuZone != null" OnContextMenu="e => OnContextMenu(e, item)" @ontouchstart="e => OnTouchStart(e, item)" @ontouchend="OnTouchEnd"
                      TriggerClick="@(ClickToSelect || OnClickRowCallback != null)" OnClick="() => ClickRow(item)"
                      TriggerDoubleClick="@(DoubleClickToEdit || OnDoubleClickRowCallback != null)" OnDoubleClick="() => DoubleClickRow(item)">
         @if (ShowDetails())
@@ -624,7 +627,7 @@
         @if (ShowLineNo)
         {
             <td class="@LineNoColumnClassString" style="@LineNoColumnStyleString">
-                <div class="@LineCellClassString">@(Rows.IndexOf(item) + 1 + (PageIndex -1) * PageItems)</div>
+                <div class="@LineCellClassString">@GetLineNo(item)</div>
             </td>
         }
         @{
@@ -729,6 +732,10 @@
                     <Checkbox TValue="TItem" ShowLabel="false" State="CheckboxState.UnChecked"></Checkbox>
                 </div>
             </td>
+        }
+        @if (ShowLineNo)
+        {
+            <td><div class="table-cell is-ph"></div></td>
         }
         @if (ShowExtendButtons && IsExtendButtonsInRowHeader)
         {

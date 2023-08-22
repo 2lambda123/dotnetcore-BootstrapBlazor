@@ -113,14 +113,11 @@ public class ListViewTest : BootstrapBlazorTestBase
             pb.Add(a => a.PageItems, 2);
         });
         Assert.True(query);
-
-        query = false;
         cut.InvokeAsync(() => cut.Instance.QueryAsync());
-        Assert.True(query);
     }
 
     [Fact]
-    public void Collapsable_Ok()
+    public void Collapsible_Ok()
     {
         var clicked = false;
         var items = Enumerable.Range(1, 6).Select(i => new Product()

@@ -43,10 +43,11 @@ export function init(id) {
 }
 
 export function dispose(id) {
-    const data = Data.get(id)
-    if (data) {
-        EventHandler.off(data.action, 'click', data.dismissSelector)
-        Popover.dispose(data.dropdown)
-    }
+    const tableFilter = Data.get(id)
     Data.remove(id)
+
+    if (tableFilter) {
+        EventHandler.off(tableFilter.action, 'click', tableFilter.dismissSelector)
+        Popover.dispose(tableFilter.dropdown)
+    }
 }

@@ -41,6 +41,10 @@
         border: none;
     }
 
+    .card-footer-code ::deep .pre-code {
+        margin: .5rem;
+    }
+
 .card-footer-control {
     text-align: center;
     color: #d3dce6;
@@ -81,11 +85,6 @@
     font-size: var(--bb-sub-font-size);
     margin-top: 1rem;
     margin-bottom: .5rem;
-}
-
-::deep .bb-avatar {
-    width: 46px;
-    border-radius: var(--bs-border-radius);
 }
 
 ::deep .table-cell .progress {

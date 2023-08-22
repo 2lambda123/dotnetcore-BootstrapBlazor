@@ -1,5 +1,4 @@
 ﻿.table-container {
-    position: relative;
     --bb-table-td-padding-x: .5rem;
     --bb-table-td-padding-y: .5rem;
     --bb-table-cardview-label-width: 30%;
@@ -19,6 +18,8 @@
     --bb-table-copy-column-margin-right: .5rem;
     --bb-table-column-fixed-border-color: #dee2e6;
     --bb-loader-bg: #f8f9fa;
+    position: relative;
+    height: 100%;
 }
 
     .table-container .table:not(.table-excel) .switch {
@@ -315,18 +316,23 @@
     border-top-right-radius: var(--bs-border-radius);
 }
 
+.table-scroll {
+    overflow: auto;
+}
+
 .table-fixed-body {
     overflow-x: auto !important;
     overflow-y: scroll !important;
 }
 
-.table-scroll {
-    overflow: auto;
-}
-
-    .table-scroll .table tbody td .table-cell:not(.is-wrap) {
-        white-space: nowrap;
+    .table-fixed-body > .table > tbody > tr > td,
+    .table-fixed-header > .table > thead > tr > th {
+        overflow: hidden;
     }
+
+.table tbody td .table-cell:not(.is-wrap) {
+    white-space: nowrap;
+}
 
 .table-cell.is-ellips {
     display: block;
@@ -481,6 +487,7 @@ tr.active:not(.is-edit):hover {
     .table-fixed-column .table .fixed {
         position: sticky;
         z-index: 2;
+        overflow: unset;
     }
 
         .table-fixed-column .table .fixed.fr {
@@ -566,15 +573,15 @@ tr.active:not(.is-edit):hover {
     position: relative;
 }
 
-    .table-resize thead th .col-resizer {
-        width: .25rem;
-        display: block;
-        position: absolute;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        cursor: col-resize;
-    }
+.col-resizer:not(.last) {
+    width: .25rem;
+    display: block;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    cursor: col-resize;
+}
 
 .table-resize .border-resize {
     border-right: 1px solid #409eff;
@@ -724,7 +731,7 @@ form .table .table-cell > textarea {
     flex: 1;
 }
 
-.table-cell.is-ph {
+.is-ph {
     height: 12.5px;
     background-color: #e9ecef;
     border-radius: var(--bs-border-radius);
@@ -815,4 +822,22 @@ form .table .table-cell > textarea {
 .col-copy {
     cursor: pointer;
     margin-right: var(--bb-table-copy-column-margin-right);
+}
+
+.table-drag-over {
+    animation: drag-column 1s linear infinite;
+}
+
+.table-dragging th[draggable] * {
+    pointer-events: none;
+}
+
+.table-drag {
+    background-color: #ddd !important;
+}
+
+@keyframes drag-column {
+    50% {
+        border-bottom-color: var(--bs-primary);
+    }
 }

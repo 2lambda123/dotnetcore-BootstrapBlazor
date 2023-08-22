@@ -1,15 +1,45 @@
-﻿import { getResponsive } from "../../modules/responsive.js?v=$version"
-import { copy, drag, getDescribedElement, getOuterHeight, getWidth } from "../../modules/utility.js?v=$version"
-import * as browser from "../../modules/browser.js?v=$version"
-import Data from "../../modules/data.js?v=$version"
-import EventHandler from "../../modules/event-handler.js?v=$version"
+﻿export { getResponsive } from '../../modules/responsive.js?v=$version'
+import { copy, drag, getDescribedElement, getOuterHeight, getWidth } from '../../modules/utility.js?v=$version'
+import '../../modules/browser.js?v=$version'
+import Data from '../../modules/data.js?v=$version'
+import EventHandler from '../../modules/event-handler.js?v=$version'
+
+const setBodyHeight = table => {
+    const el = table.el
+    const body = table.body || table.tables[0]
+    const search = el.querySelector('.table-search')
+    table.search = search
+    let searchHeight = 0
+    if (search) {
+        searchHeight = getOuterHeight(search)
+    }
+    const pagination = el.querySelector('.nav-pages')
+    let paginationHeight = 0
+    if (pagination) {
+        paginationHeight = getOuterHeight(pagination)
+    }
+    const toolbar = el.querySelector('.table-toolbar')
+    let toolbarHeight = 0
+    if (toolbar) {
+        toolbarHeight = getOuterHeight(toolbar)
+    }
+    const bodyHeight = paginationHeight + toolbarHeight + searchHeight;
+    if (bodyHeight > 0) {
+        body.parentNode.style.height = `calc(100% - ${bodyHeight}px)`
+    }
+    let headerHeight = 0
+    if (table.thead) {
+        headerHeight = getOuterHeight(table.thead)
+    }
+    if (headerHeight > 0) {
+        body.style.height = `calc(100% - ${headerHeight}px)`
+    }
+}
 
 const fixHeader = table => {
     const el = table.el
-    const body = table.body
-    const thead = table.thead
-
     const fs = el.querySelector('.fixed-scroll')
+
     if (fs) {
         let prev = fs.previousElementSibling
         while (prev) {
@@ -30,42 +60,7 @@ const fixHeader = table => {
         }
     }
 
-    const setBodyHeight = () => {
-        const search = el.querySelector('.table-search')
-        table.search = search
-        let searchHeight = 0
-        if (search) {
-            searchHeight = getOuterHeight(search)
-        }
-        const pagination = el.querySelector('.nav-pages')
-        let paginationHeight = 0
-        if (pagination) {
-            paginationHeight = getOuterHeight(pagination)
-        }
-        const toolbar = el.querySelector('.table-toolbar')
-        let toolbarHeight = 0
-        if (toolbar) {
-            toolbarHeight = getOuterHeight(toolbar)
-        }
-        const bodyHeight = paginationHeight + toolbarHeight + searchHeight;
-        if (bodyHeight > 0) {
-            body.parentNode.style.height = `calc(100% - ${bodyHeight}px)`
-        }
-        const headerHeight = getOuterHeight(table.thead)
-        if (headerHeight > 0) {
-            body.style.height = `calc(100% - ${headerHeight}px)`
-        }
-    }
-
-    setBodyHeight()
-
-    if (table.search) {
-        const observer = new ResizeObserver(() => {
-            setBodyHeight()
-        });
-        observer.observe(table.search)
-        table.observer = observer
-    }
+    setBodyHeight(table)
 }
 
 const setExcelKeyboardListener = table => {
@@ -172,6 +167,19 @@ const setExcelKeyboardListener = table => {
     })
 }
 
+const resetTableWidth = table => {
+    table.tables.forEach(t => {
+        const group = [...t.children].find(i => i.nodeName === 'COLGROUP')
+        if (group) {
+            let width = 0;
+            [...group.children].forEach(col => {
+                width += parseInt(col.style.width)
+            })
+            t.style.width = `${width}px`
+        }
+    })
+}
+
 const setResizeListener = table => {
     const eff = (col, toggle) => {
         const th = col.closest('th')
@@ -179,26 +187,22 @@ const setResizeListener = table => {
         else th.classList.remove('border-resize')
 
         const index = [].indexOf.call(th.parentNode.children, th);
-        const rows = []
         table.tables.forEach(t => {
-            const body = [...t.children].filter(i => i.nodeName === 'TBODY')
-            if (body.length > 0) {
-                const tr = [...body[0].children].filter(i => i.nodeName === 'TR')
-                tr.forEach(i => {
-                    if (!i.classList.contains('is-detail')) {
-                        rows.push(i)
+            const body = [...t.children].find(i => i.nodeName === 'TBODY')
+            if (body) {
+                const rows = [...body.children].filter(i => i.nodeName === 'TR')
+                rows.forEach(row => {
+                    if (!row.classList.contains('is-detail')) {
+                        const td = row.children.item(index)
+                        if (toggle) td.classList.add('border-resize')
+                        else {
+                            td.classList.remove('border-resize')
+                            if (td.classList.length === 0) {
+                                td.removeAttribute('class')
+                            }
+                        }
                     }
                 })
-            }
-        })
-        rows.forEach(tr => {
-            const td = tr.children.item(index)
-            if (toggle) td.classList.add('border-resize')
-            else {
-                td.classList.remove('border-resize')
-                if (td.classList.length == 0) {
-                    td.removeAttribute('class')
-                }
             }
         })
         return index
@@ -209,18 +213,19 @@ const setResizeListener = table => {
     let colIndex = 0
     let originalX = 0
 
-    // 固定表头的最后一列禁止列宽调整
-    const el = table.el
-    const columns = [...el.querySelectorAll('.col-resizer')]
-    if (table.fixedHeader) {
-        const last = columns.pop()
-        if (last) {
-            last.remove();
+    disposeColumnDrag(table.columns)
+    table.columns = []
+    const columns = [...table.tables[0].querySelectorAll('.col-resizer')]
+    columns.forEach((col, index) => {
+        if (table.thead && index === columns.length - 1) {
+            col.classList.add('last')
+            return
         }
-    }
-
-    columns.forEach(col => {
+        else {
+            col.classList.remove('last')
+        }
         table.columns.push(col)
+        EventHandler.on(col, 'click', e => e.stopPropagation())
         drag(col,
             e => {
                 colIndex = eff(col, true)
@@ -229,7 +234,8 @@ const setResizeListener = table => {
                 const width = currentCol.style.width
                 if (width) {
                     colWidth = parseInt(width)
-                } else {
+                }
+                else {
                     colWidth = getWidth(col.closest('th'))
                 }
                 tableWidth = getWidth(col.closest('table'))
@@ -238,21 +244,25 @@ const setResizeListener = table => {
             e => {
                 const marginX = e.clientX - originalX
                 table.tables.forEach(t => {
-                    const group = [...t.children].filter(i => i.nodeName === 'COLGROUP')[0]
-                    const curCol = group.children.item(colIndex)
-                    curCol.style.width = `${colWidth + marginX}px`
-                    const tableEl = curCol.closest('table')
-                    const width = tableWidth + marginX
-                    if (t.classList.contains('table-fixed')) {
-                        tableEl.style.width = `${width}px;`
-                    }
-                    else {
-                        tableEl.style.width = (width - 6) + 'px'
+                    const group = [...t.children].find(i => i.nodeName === 'COLGROUP')
+                    if (group) {
+                        const curCol = group.children.item(colIndex)
+                        curCol.style.width = `${colWidth + marginX}px`
+                        const tableEl = curCol.closest('table')
+                        let width = tableWidth + marginX
+                        if (t.closest('.table-fixed-body')) {
+                            width = width - 6
+                        }
+                        tableEl.setAttribute('style', `width: ${width}px;`)
                     }
                 })
             },
             () => {
                 eff(col, false)
+                if (table.callbacks.resizeColumnCallback) {
+                    const width = getWidth(col.parentNode);
+                    table.invoke.invokeMethodAsync(table.callbacks.resizeColumnCallback, index, width)
+                }
             }
         )
     })
@@ -260,7 +270,7 @@ const setResizeListener = table => {
 
 const setCopyColumn = table => {
     const copyCellValue = td => {
-        let ret = null;
+        let ret;
         let input = td.querySelector('.datetime-picker-input')
         if (input === null) {
             input = td.querySelector('.form-select')
@@ -290,7 +300,7 @@ const setCopyColumn = table => {
     EventHandler.on(el, 'click', '.col-copy', e => {
         const index = e.delegateTarget.closest('th').cellIndex
         let rows
-        if (table.fixedHeader) {
+        if (table.thead) {
             rows = table.body.querySelectorAll('table > tbody > tr')
         }
         else if (el.querySelector('.table-fixed-column')) {
@@ -329,26 +339,104 @@ const setCopyColumn = table => {
     })
 }
 
-export function init(id) {
+const disposeColumnDrag = columns => {
+    columns = columns || []
+    columns.forEach(col => {
+        EventHandler.off(col, 'click')
+        EventHandler.off(col, 'mousedown')
+        EventHandler.off(col, 'touchstart')
+    })
+}
+
+const setDraggable = table => {
+    let dragItem = null;
+    let index = 0
+    table.dragColumns = [...table.tables[0].querySelectorAll('thead > tr > th')].filter(i => i.draggable)
+    table.dragColumns.forEach(col => {
+        EventHandler.on(col, 'dragstart', e => {
+            col.parentNode.classList.add('table-dragging')
+            col.classList.add('table-drag')
+            index = table.dragColumns.indexOf(col)
+            dragItem = col
+            e.dataTransfer.effectAllowed = 'move'
+        })
+        EventHandler.on(col, 'dragend', e => {
+            col.parentNode.classList.remove('table-dragging')
+            dragItem.classList.remove('table-drag')
+            table.dragColumns.forEach(i => {
+                i.classList.remove('table-drag-over')
+            })
+            dragItem = null
+        })
+        EventHandler.on(col, 'drop', e => {
+            e.stopPropagation()
+            e.preventDefault()
+            if (table.callbacks.dragColumnCallback) {
+                table.invoke.invokeMethodAsync(table.callbacks.dragColumnCallback, index, table.dragColumns.indexOf(col))
+            }
+            return false
+        })
+        EventHandler.on(col, 'dragenter', e => {
+            e.preventDefault()
+            if (dragItem !== col) {
+                col.classList.add('table-drag-over')
+            }
+        })
+        EventHandler.on(col, 'dragover', e => {
+            e.preventDefault()
+            if (dragItem !== col) {
+                e.dataTransfer.dropEffect = 'move'
+            }
+            else {
+                e.dataTransfer.dropEffect = 'none'
+            }
+            return false
+        })
+        EventHandler.on(col, 'dragleave', e => {
+            e.preventDefault()
+            col.classList.remove('table-drag-over')
+        })
+    })
+}
+
+const disposeDragColumns = columns => {
+    columns = columns || []
+    columns.forEach(col => {
+        EventHandler.off(col, 'dragstart')
+        EventHandler.off(col, 'dragend')
+        EventHandler.off(col, 'drop')
+        EventHandler.off(col, 'dragenter')
+        EventHandler.off(col, 'dragover')
+        EventHandler.off(col, 'dragleave')
+    })
+}
+
+export function init(id, invoke, callbacks) {
     const el = document.getElementById(id)
     if (el === null) {
         return
     }
     const table = {
         el,
-        fixedHeader: el.querySelector('.table-fixed') != null,
-        isExcel: el.querySelector('.table-excel') != null,
-        isResizeColumn: el.querySelector('.col-resizer') != null,
+        invoke,
+        callbacks,
         columns: [],
-        tables: []
+        tables: [],
+        dragColumns: []
     }
     Data.set(id, table)
-
-    if (table.fixedHeader) {
-        table.thead = el.querySelector('.table-fixed-header')
-        table.body = el.querySelector('.table-fixed-body')
-        table.tables.push(table.thead.children[0])
-        table.tables.push(table.body.children[0])
+    const shim = [...el.children].find(i => i.classList.contains('table-shim'))
+    if (shim === undefined) {
+        return
+    }
+    table.thead = [...shim.children].find(i => i.classList.contains('table-fixed-header'))
+    table.isResizeColumn = shim.classList.contains('table-resize')
+    if (table.thead) {
+        table.isExcel = table.thead.firstChild.classList.contains('table-excel')
+        table.body = [...shim.children].find(i => i.classList.contains('table-fixed-body'))
+        table.isDraggable = table.thead.firstChild.classList.contains('table-draggable')
+        table.tables.push(table.thead.firstChild)
+        table.tables.push(table.body.firstChild)
         fixHeader(table)
 
         EventHandler.on(table.body, 'scroll', () => {
@@ -357,7 +445,10 @@ export function init(id) {
         });
     }
     else {
-        table.tables.push(table.el.querySelector('.table-wrapper').children[0])
+        table.isExcel = shim.firstChild.classList.contains('table-excel')
+        table.isDraggable = shim.firstChild.classList.contains('table-draggable')
+        table.tables.push(shim.firstChild)
+        setBodyHeight(table)
     }
 
     if (table.isExcel) {
@@ -368,7 +459,25 @@ export function init(id) {
         setResizeListener(table)
     }
 
+    if (table.isDraggable) {
+        setDraggable(table)
+    }
+
     setCopyColumn(table)
+
+    if (table.search) {
+        const observer = new ResizeObserver(() => {
+            setBodyHeight(table)
+        });
+        observer.observe(table.search)
+        table.observer = observer
+    }
+}
+
+export function resetColumn(id) {
+    const table = Data.get(id)
+    setResizeListener(table)
+    resetTableWidth(table)
 }
 
 export function sort(id) {
@@ -400,7 +509,7 @@ export function dispose(id) {
     Data.remove(id)
 
     if (table) {
-        if (table.fixedHeader) {
+        if (table.thead) {
             EventHandler.off(table.body, 'scroll')
         }
 
@@ -408,19 +517,12 @@ export function dispose(id) {
             EventHandler.off(table.element, 'keydown')
         }
 
-        table.columns.forEach(col => {
-            EventHandler.off(col, 'mousedown')
-            EventHandler.off(col, 'touchstart')
-        })
-
+        disposeColumnDrag(table.columns)
+        disposeDragColumns(table.dragColumns)
         EventHandler.off(table.element, 'click', '.col-copy')
 
         if (table.observer) {
             table.observer.disconnect()
         }
     }
-}
-
-export {
-    getResponsive
 }

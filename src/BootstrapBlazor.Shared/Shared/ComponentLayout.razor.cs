@@ -3,14 +3,21 @@
 // Website: https://www.blazor.zone or https://argozhang.github.io/
 
 using Microsoft.Extensions.Options;
+using Microsoft.JSInterop;
 
 namespace BootstrapBlazor.Shared.Shared;
 
 /// <summary>
 /// 
 /// </summary>
-public sealed partial class ComponentLayout
+public partial class ComponentLayout : IAsyncDisposable
 {
+    [NotNull]
+    private string? RazorFileName { get; set; }
+
+    [NotNull]
+    private string? CSharpFileName { get; set; }
+
     [NotNull]
     private string? VideoFileName { get; set; }
 
@@ -27,6 +34,25 @@ public sealed partial class ComponentLayout
     [Inject]
     [NotNull]
     private NavigationManager? Navigator { get; set; }
+
+    [Inject]
+    [NotNull]
+    private IJSRuntime? JSRuntime { get; set; }
+
+    [NotNull]
+    private Tab? Tab { get; set; }
+
+    /// <summary>
+    /// Instance of <see cref="JSModule"/>
+    /// </summary>
+    private JSModule? Module { get; set; }
+
+    /// <summary>
+    /// 获得 IVersionService 服务实例
+    /// </summary>
+    [Inject]
+    [NotNull]
+    private IVersionService? JSVersionService { get; set; }
 
     [Inject]
     [NotNull]
@@ -64,10 +90,31 @@ public sealed partial class ComponentLayout
     {
         base.OnParametersSet();
 
-        var page = Navigator.ToBaseRelativePath(Navigator.Uri);
-        var comNameWithHash = page.Split("/").LastOrDefault() ?? string.Empty;
-        var comName = comNameWithHash.Split("#").FirstOrDefault() ?? string.Empty;
+        var url = Navigator.ToBaseRelativePath(Navigator.Uri);
+        var comNameWithHash = url.Split('#').First();
+        var comName = comNameWithHash.Split('?').First();
+        RazorFileName = $"{comName}.razor";
+        CSharpFileName = $"{comName}.razor.cs";
         VideoFileName = comName;
+
+        Tab?.ActiveTab(0);
+    }
+
+    /// <summary>
+    /// <inheritdoc/>
+    /// </summary>
+    /// <param name="firstRender"></param>
+    /// <returns></returns>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Module = await JSRuntime.LoadModule("./_content/BootstrapBlazor.Shared/Shared/ComponentLayout.razor.js", JSVersionService.GetVersion());
+        }
+        if (Module != null)
+        {
+            await Module.InvokeVoidAsync("init");
+        }
     }
 
     private Task OnIconThemeChanged(string key)
@@ -76,5 +123,33 @@ public sealed partial class ComponentLayout
 
         Navigator.NavigateTo(Navigator.Uri, true);
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// <inheritdoc/>
+    /// </summary>
+    /// <param name="disposing"></param>
+    /// <returns></returns>
+    protected virtual async ValueTask DisposeAsync(bool disposing)
+    {
+        if (disposing)
+        {
+            // 销毁 JSModule
+            if (Module != null)
+            {
+                await Module.DisposeAsync();
+                Module = null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// <inheritdoc/>
+    /// </summary>
+    /// <returns></returns>
+    public async ValueTask DisposeAsync()
+    {
+        await DisposeAsync(true);
+        GC.SuppressFinalize(this);
     }
 }
