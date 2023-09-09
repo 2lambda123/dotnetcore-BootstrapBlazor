@@ -7,6 +7,14 @@
 
 <DemoBlock Title="@Localizer["FloatingUINormalTitle"]"
            Introduction="@Localizer["FloatingUINormalIntro"]"
-           Name="Normal"
-           Demo="typeof(Demos.FloatingUIs.FloatingUINormal)">
+           Name="Normal">
+    <FloatingUI Trigger="hover">
+        <div class="float-ui">Test</div>
+        <FloatingElement>
+            <div class="dropdown-menu shadow show">
+                <div class="dropdown-item">Item 1</div>
+                <div class="dropdown-item">Item 2</div>
+            </div>
+        </FloatingElement>
+    </FloatingUI>
 </DemoBlock>
