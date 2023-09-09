@@ -9,14 +9,6 @@
     "FailedText": "Failed to load",
     "LoadText": "Loading ..."
   },
-  "BootstrapBlazor.Components.Camera": {
-    "DeviceLabel": "Camera",
-    "InitDevicesString": "Initializing ...",
-    "PlayText": "Open",
-    "StopText": "Close",
-    "PhotoText": "Photo",
-    "NotFoundDevicesString": "Video device not found"
-  },
   "BootstrapBlazor.Components.Calendar": {
     "PreviousYear": "Previous Year",
     "PreviousMonth": "Previous Month",
@@ -283,7 +275,9 @@
   },
   "BootstrapBlazor.Components.Transfer": {
     "LeftPanelText": "All",
-    "RightPanelText": "Selected"
+    "RightPanelText": "Selected",
+    "MinErrorMessage": "Please select at least {0} items",
+    "MaxErrorMessage": "Up to {0} items can be selected"
   },
   "BootstrapBlazor.Components.TransferPanel": {
     "SearchPlaceHolderString": "Please input ...",
@@ -329,5 +323,22 @@
     "ButtonText": "Copy",
     "DialogHeaderText": "Selected Icon",
     "CopiedTooltipText": "Copied"
+  },
+  "BootstrapBlazor.Components.Splitting": {
+    "Text": "Loading ..."
+  },
+  "BootstrapBlazor.Components.QueryBuilder": {
+    "And": "and",
+    "Or": "or",
+    "GreaterThanOrEqual": "GreaterThanOrEqual",
+    "LessThanOrEqual": "LessThanOrEqual",
+    "GreaterThan": "GreaterThan",
+    "LessThan": "LessThan",
+    "Equal": "Equal",
+    "NotEqual": "NotEqual",
+    "Contains": "Contains",
+    "NotContains": "NotContains",
+    "GroupText": "Group",
+    "ItemText": "Item"
   }
 }

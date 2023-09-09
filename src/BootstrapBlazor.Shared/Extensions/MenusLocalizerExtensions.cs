@@ -12,7 +12,7 @@ internal static class MenusLocalizerExtensions
 {
     public static List<MenuItem> GenerateMenus(this IStringLocalizer<NavMenu> Localizer)
     {
-        var Menus = new List<MenuItem>();
+        var menus = new List<MenuItem>();
 
         // 快速入门
         var item = new DemoMenuItem()
@@ -100,7 +100,7 @@ internal static class MenusLocalizerExtensions
         };
         AddSummary(item);
 
-        return Menus;
+        return menus;
 
         void AddOtherComponent(DemoMenuItem item)
         {
@@ -116,9 +116,15 @@ internal static class MenusLocalizerExtensions
                     Text = Localizer["Live2DDisplayIntro"],
                     Url = "live2d-display"
                 },
+                new()
+                {
+                    IsNew = true,
+                    Text = Localizer["Splitting"],
+                    Url = "splitting"
+                },
             };
 
-            AddBadge(item, count: 2);
+            AddBadge(item, count: 3);
         }
 
         void AddSpeech(DemoMenuItem item)
@@ -260,6 +266,7 @@ internal static class MenusLocalizerExtensions
                 },
                 new()
                 {
+                    Match = NavLinkMatch.All,
                     Text = Localizer["Checkbox"],
                     Url = "checkbox"
                 },
@@ -357,6 +364,7 @@ internal static class MenusLocalizerExtensions
                 },
                 new()
                 {
+                    Match = NavLinkMatch.All,
                     Text = Localizer["Select"],
                     Url = "select"
                 },
@@ -580,6 +588,12 @@ internal static class MenusLocalizerExtensions
                 },
                 new()
                 {
+                    IsNew = true,
+                    Text = Localizer["MindMap"],
+                    Url = "mind-map"
+                },
+                new()
+                {
                     Text = Localizer["PdfReader"],
                     Url = "pdf-reader"
                 },
@@ -587,6 +601,12 @@ internal static class MenusLocalizerExtensions
                 {
                     Text = Localizer["Print"],
                     Url = "print"
+                },
+                new()
+                {
+                    IsNew = true,
+                    Text = Localizer["QueryBuilder"],
+                    Url = "query-builder"
                 },
                 new()
                 {
@@ -657,6 +677,18 @@ internal static class MenusLocalizerExtensions
                 {
                     Text = Localizer["VideoPlayer"],
                     Url = "video-player"
+                },
+                new()
+                {
+                    IsNew = true,
+                    Text = Localizer["WebSerial"],
+                    Url = "web-serial"
+                },
+                new()
+                {
+                    IsNew = true,
+                    Text = Localizer["WebSpeech"],
+                    Url = "web-speech"
                 }
             };
             AddBadge(item);
@@ -943,6 +975,12 @@ internal static class MenusLocalizerExtensions
                 new()
                 {
                     IsNew = true,
+                    Text = Localizer["CountButton"],
+                    Url = "count-button"
+                },
+                new()
+                {
+                    IsNew = true,
                     Text = Localizer["DialButton"],
                     Url = "dial-button"
                 },
@@ -1188,9 +1226,9 @@ internal static class MenusLocalizerExtensions
         {
             // 计算组件总数
             var count = 0;
-            count = Menus.OfType<DemoMenuItem>().Sum(i => i.Count);
+            count = menus.OfType<DemoMenuItem>().Sum(i => i.Count);
             AddBadge(item, false, count);
-            Menus.Insert(1, item);
+            menus.Insert(1, item);
         }
 
         void AddBadge(DemoMenuItem item, bool append = true, int? count = null)
@@ -1205,7 +1243,7 @@ internal static class MenusLocalizerExtensions
             }
             if (append)
             {
-                Menus.Add(item);
+                menus.Add(item);
             }
 
             static bool ShouldBadge(DemoMenuItem? item) => item != null && (item.IsNew || item.IsUpdate);
