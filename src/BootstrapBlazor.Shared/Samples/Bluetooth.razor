@@ -51,6 +51,20 @@
     <pre style="color:red">@errorMessage</pre>
 </DemoBlock>
 
+<h4>@Localizer["BluetoothNotificationTitle"]</h4>
+
+<DemoBlock Title="@Localizer["BluetoothBatteryLevelTitle"]"
+           Introduction="@Localizer["BluetoothBatteryLevelIntro"]"
+           Name="BatteryLevel">
+    <button class="btn btn-outline-primary" @onclick="GetBatteryLevel ">@Localizer["GetBatteryLevelButtonText"]</button>
+    <BatteryLevel @ref="batteryLevel" OnUpdateValue="OnUpdateValue" OnUpdateStatus="OnUpdateStatus" OnUpdateError="OnError" />
+    <br />
+    <progress max="100" value="@value"> @value % </progress>
+    <pre>@message</pre>
+    <pre style="color:green">@statusMessage</pre>
+    <pre style="color:red">@errorMessage</pre>
+</DemoBlock>
+
 <h4>@Localizer["BluetoothHeartRate"]</h4>
 
 <DemoBlock Title="@Localizer["BatteryLevelTitle"]"
