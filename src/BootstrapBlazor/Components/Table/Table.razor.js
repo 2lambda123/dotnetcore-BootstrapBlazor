@@ -40,7 +40,7 @@ const setBodyHeight = table => {
         }
         let headerHeight = 0
         if (table.thead) {
-            headerHeight = getOuterHeight(table.thead)
+            headerHeight = getOuterHeight(table.thead.querySelector('thead'))
         }
         if (headerHeight > 0) {
             body.style.height = `calc(100% - ${headerHeight}px)`
@@ -195,6 +195,19 @@ const resetTableWidth = table => {
 const setResizeListener = table => {
     const eff = (col, toggle) => {
         const th = col.closest('th')
+        if (th.parentNode === null) {
+            EventHandler.off(col, 'click')
+            EventHandler.off(col, 'mousedown')
+            EventHandler.off(col, 'touchstart')
+
+            table.tables.forEach(t => {
+                const cells = t.querySelectorAll('.border-resize');
+                cells.forEach(c => c.classList.remove('border-resize'))
+            })
+
+            return
+        }
+
         if (toggle) th.classList.add('border-resize')
         else th.classList.remove('border-resize')
 
@@ -229,13 +242,6 @@ const setResizeListener = table => {
     table.columns = []
     const columns = [...table.tables[0].querySelectorAll('.col-resizer')]
     columns.forEach((col, index) => {
-        if (table.thead && index === columns.length - 1) {
-            col.classList.add('last')
-            return
-        }
-        else {
-            col.classList.remove('last')
-        }
         table.columns.push(col)
         EventHandler.on(col, 'click', e => e.stopPropagation())
         drag(col,
@@ -272,9 +278,13 @@ const setResizeListener = table => {
             () => {
                 eff(col, false)
                 if (table.callbacks.resizeColumnCallback) {
-                    const width = getWidth(col.parentNode);
-                    table.invoke.invokeMethodAsync(table.callbacks.resizeColumnCallback, index, width)
+                    const th = col.closest('th')
+                    const width = getWidth(th);
+                    const currentIndex = [...table.tables[0].querySelectorAll('thead > tr > th > .col-resizer')].indexOf(col)
+                    table.invoke.invokeMethodAsync(table.callbacks.resizeColumnCallback, currentIndex, width)
                 }
+
+                saveColumnWidth(table)
             }
         )
     })
@@ -368,6 +378,7 @@ const setDraggable = table => {
         EventHandler.on(col, 'dragstart', e => {
             col.parentNode.classList.add('table-dragging')
             col.classList.add('table-drag')
+            table.dragColumns = [...table.tables[0].querySelectorAll('thead > tr > th')].filter(i => i.draggable)
             index = table.dragColumns.indexOf(col)
             dragItem = col
             e.dataTransfer.effectAllowed = 'move'
@@ -450,6 +461,24 @@ export function init(id, invoke, callbacks) {
     reset(id)
 }
 
+export function reloadColumnWidth(id, tableName) {
+    const key = `bb-table-column-width-${tableName}`
+    return localStorage.getItem(key);
+}
+
+const saveColumnWidth = table => {
+    const cols = table.columns
+    const tableWidth = table.tables[0].offsetWidth
+    const tableName = table.tables[0].getAttribute('data-bb-name')
+    const key = `bb-table-column-width-${tableName}`
+    localStorage.setItem(key, JSON.stringify({
+        "cols": cols.map(col => {
+            return { "width": col.closest('th').offsetWidth, "name": col.getAttribute('data-bb-field') }
+        }),
+        "table": tableWidth
+    }));
+}
+
 export function reset(id) {
     const table = Data.get(id)
 
@@ -502,7 +531,7 @@ export function reset(id) {
         const toolbar = [...table.el.children].find(i => i.classList.contains('table-toolbar'))
         if (toolbar) {
             const right = toolbar.querySelector('.table-column-right')
-            if(right) {
+            if (right) {
                 setToolbarDropdown(table, right)
             }
         }
@@ -519,8 +548,19 @@ export function reset(id) {
 
 export function resetColumn(id) {
     const table = Data.get(id)
-    setResizeListener(table)
-    resetTableWidth(table)
+    if (table) {
+        setResizeListener(table)
+        resetTableWidth(table)
+    }
+}
+
+export function bindResizeColumn(id) {
+    const table = Data.get(id)
+    if (table) {
+        if (table.isResizeColumn) {
+            setResizeListener(table)
+        }
+    }
 }
 
 export function sort(id) {
@@ -539,10 +579,11 @@ export function sort(id) {
 export function load(id, method) {
     const table = Data.get(id)
 
-    const loader = table.el.querySelector('.table-loader')
+    const loader = [...table.el.children].find(el => el.classList.contains('table-loader'));
     if (method === 'show') {
         loader.classList.add('show')
-    } else {
+    }
+    else {
         loader.classList.remove('show')
     }
 }

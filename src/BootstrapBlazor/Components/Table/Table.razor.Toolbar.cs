@@ -512,7 +512,7 @@ public partial class Table<TItem>
 
         async Task InternalOnEditAsync()
         {
-            EditModel = IsTracking ? SelectedRows[0] : Utility.Clone(SelectedRows[0]);
+            EditModel = (IsTracking || DynamicContext != null) ? SelectedRows[0] : Utility.Clone(SelectedRows[0]);
             if (OnEditAsync != null)
             {
                 await OnEditAsync(EditModel);
@@ -968,6 +968,9 @@ public partial class Table<TItem>
             InternalResetVisibleColumns(Columns.Select(i => new ColumnVisibleItem(i.GetFieldName(), i.Visible)));
 
             QueryDynamicItems(DynamicContext);
+
+            // 重新绑定列拖拽
+            _bindResizeColumn = true;
         }
     }
 

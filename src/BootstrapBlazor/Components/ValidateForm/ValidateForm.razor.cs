@@ -99,7 +99,7 @@ public partial class ValidateForm
     /// <summary>
     /// 验证组件缓存
     /// </summary>
-    private ConcurrentDictionary<(string FieldName, Type ModelType), (FieldIdentifier FieldIdentifier, IValidateComponent ValidateComponent)> ValidatorCache { get; } = new();
+    private readonly ConcurrentDictionary<(string FieldName, Type ModelType), (FieldIdentifier FieldIdentifier, IValidateComponent ValidateComponent)> _validatorCache = new();
 
     private string? DisableAutoSubmitString => (DisableAutoSubmitFormByEnter.HasValue && DisableAutoSubmitFormByEnter.Value) ? "true" : null;
 
@@ -123,7 +123,7 @@ public partial class ValidateForm
     /// <param name="value"></param>
     internal void AddValidator((string FieldName, Type ModelType) key, (FieldIdentifier FieldIdentifier, IValidateComponent IValidateComponent) value)
     {
-        ValidatorCache.TryAdd(key, value);
+        _validatorCache.TryAdd(key, value);
     }
 
     /// <summary>
@@ -131,7 +131,7 @@ public partial class ValidateForm
     /// </summary>
     /// <param name="key"></param>
     /// <param name="value"></param>
-    internal bool TryRemoveValidator((string FieldName, Type ModelType) key, [MaybeNullWhen(false)] out (FieldIdentifier FieldIdentifier, IValidateComponent IValidateComponent) value) => ValidatorCache.TryRemove(key, out value);
+    internal bool TryRemoveValidator((string FieldName, Type ModelType) key, [MaybeNullWhen(false)] out (FieldIdentifier FieldIdentifier, IValidateComponent IValidateComponent) value) => _validatorCache.TryRemove(key, out value);
 
     /// <summary>
     /// 设置指定字段错误信息
@@ -156,7 +156,7 @@ public partial class ValidateForm
         if (exp.Expression != null)
         {
             var modelType = exp.Expression.Type;
-            var validator = ValidatorCache.FirstOrDefault(c => c.Key.ModelType == modelType && c.Key.FieldName == fieldName).Value.ValidateComponent;
+            var validator = _validatorCache.FirstOrDefault(c => c.Key.ModelType == modelType && c.Key.FieldName == fieldName).Value.ValidateComponent;
             if (validator != null)
             {
                 var results = new List<ValidationResult>
@@ -209,7 +209,7 @@ public partial class ValidateForm
 
     private bool TryGetValidator(Type modelType, string fieldName, [NotNullWhen(true)] out IValidateComponent validator)
     {
-        validator = ValidatorCache.FirstOrDefault(c => c.Key.ModelType == modelType && c.Key.FieldName == fieldName).Value.ValidateComponent;
+        validator = _validatorCache.FirstOrDefault(c => c.Key.ModelType == modelType && c.Key.FieldName == fieldName).Value.ValidateComponent;
         return validator != null;
     }
 
@@ -229,10 +229,10 @@ public partial class ValidateForm
         else
         {
             // 遍历所有可验证组件进行数据验证
-            foreach (var key in ValidatorCache.Keys)
+            foreach (var key in _validatorCache.Keys)
             {
                 // 验证 DataAnnotations
-                var validatorValue = ValidatorCache[key];
+                var validatorValue = _validatorCache[key];
                 var validator = validatorValue.ValidateComponent;
                 var fieldIdentifier = validatorValue.FieldIdentifier;
                 if (validator.IsNeedValidate)
@@ -267,7 +267,7 @@ public partial class ValidateForm
     /// <param name="results"></param>
     internal async Task ValidateFieldAsync(ValidationContext context, List<ValidationResult> results)
     {
-        if (!string.IsNullOrEmpty(context.MemberName) && ValidatorCache.TryGetValue((context.MemberName, context.ObjectType), out var v))
+        if (!string.IsNullOrEmpty(context.MemberName) && _validatorCache.TryGetValue((context.MemberName, context.ObjectType), out var v))
         {
             var validator = v.ValidateComponent;
             if (validator.IsNeedValidate)
@@ -382,7 +382,7 @@ public partial class ValidateForm
             context.DisplayName = fieldIdentifier.GetDisplayName();
             context.MemberName = fieldIdentifier.FieldName;
 
-            if (ValidatorCache.TryGetValue((fieldIdentifier.FieldName, fieldIdentifier.Model.GetType()), out var v))
+            if (_validatorCache.TryGetValue((fieldIdentifier.FieldName, fieldIdentifier.Model.GetType()), out var v))
             {
                 var validator = v.ValidateComponent;
 
@@ -435,8 +435,10 @@ public partial class ValidateForm
             ValidateDataAnnotations(propertyValue, context, messages, pi);
             if (messages.Count == 0)
             {
+                _tcs = new();
                 // 自定义验证组件
                 await validator.ValidatePropertyAsync(propertyValue, context, messages);
+                _tcs.TrySetResult(!messages.Any());
             }
         }
 
@@ -456,6 +458,8 @@ public partial class ValidateForm
         AsyncSubmitButtons.Add(button);
     }
 
+    private TaskCompletionSource<bool>? _tcs;
+
     private async Task OnValidSubmitForm(EditContext context)
     {
         var isAsync = AsyncSubmitButtons.Any();
@@ -467,10 +471,28 @@ public partial class ValidateForm
         {
             await Task.Yield();
         }
-        if (OnValidSubmit != null)
+
+        var valid = true;
+        // 由于可能有异步验证，需要等待异步验证结束
+        if (_tcs != null)
         {
-            await OnValidSubmit(context);
+            valid = await _tcs.Task;
         }
+        if (valid)
+        {
+            if (OnValidSubmit != null)
+            {
+                await OnValidSubmit(context);
+            }
+        }
+        else
+        {
+            if (OnInvalidSubmit != null)
+            {
+                await OnInvalidSubmit(context);
+            }
+        }
+
         foreach (var b in AsyncSubmitButtons)
         {
             b.TriggerAsync(false);
@@ -520,7 +542,7 @@ public partial class ValidateForm
     /// <param name="value"></param>
     public void NotifyFieldChanged(in FieldIdentifier fieldIdentifier, object? value)
     {
-        ValueChagnedFields.AddOrUpdate(fieldIdentifier, key => value, (key, v) => value);
+        ValueChangedFields.AddOrUpdate(fieldIdentifier, key => value, (key, v) => value);
         OnFieldValueChanged?.Invoke(fieldIdentifier.FieldName, value);
     }
 
@@ -528,5 +550,13 @@ public partial class ValidateForm
     /// 获取 当前表单值改变的属性集合
     /// </summary>
     /// <returns></returns>
+    public ConcurrentDictionary<FieldIdentifier, object?> ValueChangedFields { get; } = new();
+
+    /// <summary>
+    /// 获取 当前表单值改变的属性集合
+    /// </summary>
+    /// <returns></returns>
+    [Obsolete("已过期，单词拼写错误，请使用 ValueChangedFields，Please use ValueChangedFields instead. wrong typo")]
+    [ExcludeFromCodeCoverage]
     public ConcurrentDictionary<FieldIdentifier, object?> ValueChagnedFields { get; } = new();
 }

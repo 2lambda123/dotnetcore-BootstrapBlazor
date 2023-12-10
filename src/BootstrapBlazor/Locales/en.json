@@ -123,7 +123,7 @@
     "PrintButtonText": "Print"
   },
   "BootstrapBlazor.Components.MultiSelect": {
-    "PlaceHolder": "...",
+    "PlaceHolder": "Select items ...",
     "SelectAllText": "All",
     "ReverseSelectText": "Reverse",
     "ClearText": "Clear",
@@ -344,7 +344,6 @@
     "GroupText": "Group",
     "ItemText": "Item"
   },
-
   "BootstrapBlazor.Components.TableAdvancedSortDialog": {
     "AscText": "Ascending",
     "DescText": "Descending"

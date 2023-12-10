@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 // Website: https://www.blazor.zone or https://argozhang.github.io/
 
-using BootstrapBlazor.Shared;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -50,7 +49,6 @@ public class TableDialogTestHost : IDisposable
     {
         services.AddBootstrapBlazor(op => op.ToastDelay = 2000);
         services.AddSingleton(typeof(IDataService<>), typeof(MockEFCoreDataService<>));
-        services.ConfigureJsonLocalizationOptions(op => op.AdditionalJsonAssemblies = new[] { typeof(Alert).Assembly });
     }
 
     protected virtual void ConfigureConfiguration(IServiceCollection services)

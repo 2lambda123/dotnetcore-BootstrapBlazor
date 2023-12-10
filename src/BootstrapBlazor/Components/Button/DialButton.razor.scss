@@ -1,17 +1,17 @@
 .dial-button {
-    --bb-dial-list-zindex: #{$dial-list-zindex};
-    --bb-dial-item-padding: #{$dial-item-padding};
-    --bb-dial-item-bg: #{$dial-item-bg};
-    --bb-dial-item-hover-bg: #{$dial-item-hover-bg};
-    --bb-dial-item-hover-color: #{$dial-item-hover-color};
-    --bb-dial-item-hover-border-color: #{$dial-item-hover-border-color};
-    --bb-dial-item-border: #{$dial-item-border};
-    --bb-dial-item-margin: #{$dial-item-margin};
-    --bb-dial-item-width: #{$dial-item-width};
-    --bb-dial-item-height: #{$dial-item-height};
-    --bb-dial-item-radius: #{$dial-item-radius};
-    --bb-dial-item-shadow: #{$dial-item-shadow};
-    --bb-dial-list-radial-offset: #{$dial-list-radial-offset};
+    --bb-dial-list-zindex: #{$bb-dial-list-zindex};
+    --bb-dial-item-padding: #{$bb-dial-item-padding};
+    --bb-dial-item-bg: #{$bb-dial-item-bg};
+    --bb-dial-item-hover-bg: #{$bb-dial-item-hover-bg};
+    --bb-dial-item-hover-color: #{$bb-dial-item-hover-color};
+    --bb-dial-item-hover-border-color: #{$bb-dial-item-hover-border-color};
+    --bb-dial-item-border: #{$bb-dial-item-border};
+    --bb-dial-item-margin: #{$bb-dial-item-margin};
+    --bb-dial-item-width: #{$bb-dial-item-width};
+    --bb-dial-item-height: #{$bb-dial-item-height};
+    --bb-dial-item-radius: #{$bb-dial-item-radius};
+    --bb-dial-item-shadow: #{$bb-dial-item-shadow};
+    --bb-dial-list-radial-offset: #{$bb-dial-list-radial-offset};
     position: relative;
     display: inline-flex;
 
@@ -66,7 +66,7 @@
 
     &[data-bb-placement*="bottom"] {
         .dial-list {
-            top: var(--bb-dial-list-vertical-offset);
+            bottom: var(--bb-dial-list-vertical-offset);
             left: var(--bb-dial-list-horizontal-offset);
         }
     }
@@ -74,7 +74,7 @@
     &[data-bb-placement="middle-end"] {
         .dial-list {
             top: var(--bb-dial-list-vertical-offset);
-            left: var(--bb-dial-list-horizontal-offset);
+            right: var(--bb-dial-list-horizontal-offset);
         }
     }
 
@@ -103,6 +103,7 @@
         .dial-list-content {
             flex-direction: column;
             height: var(--bs-dial-list-height);
+            flex-direction: column-reverse;
         }
     }
 
@@ -206,6 +207,11 @@
         &[data-bb-placement="bottom-start"] {
             .dial-list {
                 border-top-right-radius: 100%;
+                bottom: 0;
+                left: 0;
+            }
+
+            .dial-item {
                 bottom: 0;
                 left: 0;
             }
